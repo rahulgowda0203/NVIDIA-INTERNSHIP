@@ -1,0 +1,1 @@
+Goal of today: by the end of this notebook you will be able to take raw data, train a model, honestly measure how good it is, detect when it is fooling itself (overfitting), validate it properly with cross-validation, tune it with GridSearch, and finally hand in a tuned, validated predictive model as your deliverable.
