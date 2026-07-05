@@ -1,0 +1,35 @@
+# AI/ML Internship – Day 2
+
+## Overview
+
+Day 2 focused on understanding how raw data is prepared before building machine learning models. The session introduced essential preprocessing techniques and practical data analysis using Python.
+
+### Key Learning Areas
+
+* Dataset loading and inspection
+* Data cleaning and preprocessing
+* Exploratory Data Analysis (EDA)
+* Encoding categorical features
+* Feature engineering
+* Handling imbalanced datasets
+
+### Practical Work
+
+Implemented Python programs to perform preprocessing tasks and prepare datasets for machine learning applications.
+
+### Repository Contents
+
+* `01_Loading_Datasets.py`
+* `03_Data_Cleaning.py`
+* `06_EDA.py`
+* `08_Encoding.py`
+* `09_Feature_Engineering.py`
+* `10_Imbalanced_Data.py`
+
+### Skills Gained
+
+* Data preprocessing
+* Feature transformation
+* Data visualization
+* Python for Machine Learning
+* Dataset preparation
