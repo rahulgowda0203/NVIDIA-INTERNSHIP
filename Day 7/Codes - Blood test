@@ -1,0 +1,50 @@
+pip install google-genai
+
+from google import genai
+from PIL import Image
+
+# Initialize Gemini Client
+client = genai.Client(api_key="your api")
+
+# Load medical report image
+image = Image.open("image path")
+
+prompt = """
+You are an AI medical report assistant.
+
+Analyze this medical report.
+
+Return the following sections:
+
+1. Patient Information
+   - Name
+   - Age
+   - Gender
+   - Date
+
+2. Test Results
+   Display as a table with:
+   - Test Name
+   - Result
+   - Reference Range (if available)
+   - Status (Within Range / Outside Range / Not Available)
+
+3. Highlight values that appear outside the provided reference range.
+
+4. Explain each test in simple language suitable for a non-medical person.
+
+5. Provide a concise summary of the report.
+
+6. Suggest general questions the patient could ask their healthcare provider.
+
+Do NOT diagnose medical conditions.
+Do NOT prescribe medications.
+If information is missing, clearly state that.
+"""
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents=[prompt, image]
+)
+
+print(response.text)
