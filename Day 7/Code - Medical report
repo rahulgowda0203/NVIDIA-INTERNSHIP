@@ -1,0 +1,177 @@
+pip install faiss-cpu
+!pip install -q google-genai sentence-transformers faiss-cpu
+
+!pip uninstall -y numpy
+!pip install numpy==1.26.4
+!pip install faiss-cpu
+!pip install -q google-genai sentence-transformers faiss-cpu
+
+import os
+import pandas as pd
+import torch
+from sentence_transformers import SentenceTransformer
+from google import genai
+import faiss
+
+# ---------------------------------------
+# GPU Detection
+# ---------------------------------------
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+print("Using Device:", device)
+
+if device == "cuda":
+    print("GPU:", torch.cuda.get_device_name(0))
+
+# ---------------------------------------
+# Load Dataset
+# ---------------------------------------
+CSV_FILE = "/content/medical_reports.csv"
+
+df = pd.read_csv(CSV_FILE)
+
+print(df.head())
+
+# ---------------------------------------
+# Convert CSV into Documents
+# One document per patient
+# ---------------------------------------
+documents = []
+
+for patient_id, group in df.groupby("Patient_ID"):
+
+    report = f"""
+Patient ID : {patient_id}
+
+Name : {group.iloc[0]['Name']}
+Age : {group.iloc[0]['Age']}
+Gender : {group.iloc[0]['Gender']}
+
+Medical Report
+--------------
+"""
+
+    for _, row in group.iterrows():
+
+        report += f"""
+Test Name : {row['Test_Name']}
+Result : {row['Result']} {row['Unit']}
+Reference Range : {row['Reference_Range']}
+Status : {row['Status']}
+"""
+
+    documents.append(report)
+
+print("\nSample Document\n")
+print(documents[0])
+
+# ---------------------------------------
+# Load Embedding Model
+# ---------------------------------------
+print("\nLoading Embedding Model...")
+
+embedder = SentenceTransformer(
+    "BAAI/bge-small-en-v1.5",
+    device=device
+)
+
+# ---------------------------------------
+# Generate Embeddings
+# ---------------------------------------
+print("Generating Embeddings...")
+
+embeddings = embedder.encode(
+    documents,
+    batch_size=16,
+    convert_to_numpy=True,
+    show_progress_bar=True
+)
+
+print("Embedding Shape:", embeddings.shape)
+
+# ---------------------------------------
+# Build FAISS Index
+# ---------------------------------------
+dimension = embeddings.shape[1]
+
+index = faiss.IndexFlatL2(dimension)
+
+index.add(embeddings)
+
+print("Documents Indexed:", index.ntotal)
+
+# ---------------------------------------
+# Gemini API
+# ---------------------------------------
+
+# Option 1: Direct API key (recommended for testing)
+API_KEY = "AQ.Ab8RN6J7SFy_-OnMGp9g3wBGDQagsG1mm2Uv2xak8IfJ280rfw"
+
+client = genai.Client(api_key=API_KEY)
+
+# ---------------------------------------
+# Ask Gemini
+# ---------------------------------------
+
+def ask_gemini(question, top_k=2):
+
+    q_embedding = embedder.encode(
+        [question],
+        convert_to_numpy=True
+    )
+
+    distances, indices = index.search(q_embedding, top_k)
+
+    context = "\n\n".join(
+        documents[i] for i in indices[0]
+    )
+
+    prompt = f"""
+You are an experienced medical report assistant.
+
+Below is the retrieved patient report.
+
+{context}
+
+Answer ONLY from the report.
+
+If the information is unavailable,
+say:
+
+"The requested information is not available in this report."
+
+Never diagnose diseases.
+
+Never prescribe medicine.
+
+Explain medical terms in simple language.
+
+Question:
+{question}
+"""
+
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
+
+    return response.text
+
+# ---------------------------------------
+# Chat Loop
+# ---------------------------------------
+print("\n" + "="*60)
+print("Medical Report Assistant")
+print("="*60)
+
+while True:
+
+    question = input("\nAsk Question (type exit): ")
+
+    if question.lower() == "exit":
+        break
+
+    answer = ask_gemini(question)
+
+    print("\nGemini Answer:\n")
+    print(answer)
